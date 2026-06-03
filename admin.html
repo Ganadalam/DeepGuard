@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script>
+(function(){
+  var t=localStorage.getItem("dg_theme")||"dark";
+  document.documentElement.setAttribute("data-theme",t);
+})();
+</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — DeepGuard Pro</title>
+  <link rel="stylesheet" href="./css/main.css" />
+  <style>
+    .admin-sidebar {
+      position: fixed;
+      top: 60px; left: 0; bottom: 0;
+      width: 220px;
+      background: var(--clr-surface-1);
+      border-right: 1px solid var(--clr-line);
+      padding: 24px 0;
+      z-index: 90;
+    }
+    .admin-sidebar__item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: .8125rem;
+      font-weight: 500;
+      color: var(--clr-text-muted);
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: all .18s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .admin-sidebar__item:hover { color: var(--clr-text); background: var(--clr-surface-2); }
+    .admin-sidebar__item.active { color: var(--clr-accent); border-left-color: var(--clr-accent); background: var(--clr-accent-dim); }
+    .admin-content { margin-left: 220px; padding: 80px 32px 60px; min-height: 100vh; }
+    @media(max-width:768px) { .admin-sidebar { display:none; } .admin-content { margin-left:0; padding: 80px 16px 40px; } }
+    /* 알림 드롭다운 */
+    #notif-dropdown { display: none; }
+    #notif-dropdown.is-open { display: block; }
+    #notif-bell.has-notif svg { stroke: var(--clr-warn); }
+    #notif-bell.has-notif { border-color: rgba(255,170,0,.3); background: rgba(255,170,0,.08); }
+    .notif-item:hover { background: var(--clr-surface-2) !important; }
+    /* admin-section 토글 */
+    .admin-section { display: block; }
+    .admin-section.hidden { display: none; }
+    /* Improved stat cards */
+    .stat-card {
+      padding: 20px 18px;
+    }
+    .stat-card__value {
+      font-size: 1.5rem;
+    }
+  </style>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%23060b13%22/><path d=%22M16 6 L26 11 V17 C26 22 21 26 16 28 C11 26 6 22 6 17 V11 Z%22 fill=%22none%22 stroke=%22%2300c8ff%22 stroke-width=%222%22/><circle cx=%2216%22 cy=%2218%22 r=%223%22 fill=%22%2300c8ff%22/><line x1=%2216%22 y1=%2212%22 x2=%2216%22 y2=%2215%22 stroke=%22%2300c8ff%22 stroke-width=%222%22/></svg>" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="./index.html" class="nav__logo">
+      <div class="nav__logo-mark">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 2L14 5v6L8 14 2 11V5L8 2z" stroke="#000" stroke-width="1.5"/><circle cx="8" cy="8" r="2" fill="#000"/></svg>
+      </div>
+      Deep<span>Guard</span>&nbsp;Pro
+    </a>
+    <div class="flex items-center gap-16">
+      <!-- 알림 벨 -->
+      <div style="position:relative">
+        <button id="notif-bell" style="position:relative;width:36px;height:36px;border-radius:50%;background:var(--clr-surface-2);border:1px solid var(--clr-line);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s" title="알림">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--clr-text-muted)" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span id="notif-badge" style="position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--clr-danger);color:#fff;font-size:.55rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;border:1px solid var(--clr-void)">0</span>
+        </button>
+        <!-- 알림 드롭다운 -->
+        <div id="notif-dropdown" style="position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--clr-surface-1);border:1px solid var(--clr-line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);z-index:200;display:none;overflow:hidden" onclick="event.stopPropagation()">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--clr-surface-3);border:1px solid var(--clr-line);display:flex;align-items:center;justify-content:center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--clr-text-muted)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span style="font-size:.8125rem;color:var(--clr-text-muted)" id="admin-username">admin</span>
+        <span class="badge badge--danger" style="font-size:.55rem">ADMIN</span>
+      </div>
+      <button id="admin-logout-btn" class="btn btn--ghost btn--sm">로그아웃</button>
+    </div>
+  
+  <button class="theme-toggle" id="theme-toggle-btn" aria-label="테마 전환" title="라이트/다크 전환">
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+        <!-- Mobile hamburger -->
+  <button class="nav__hamburger" id="nav-hamburger" aria-label="메뉴 열기">
+    <span></span><span></span><span></span>
+  </button>
+</div><!-- end nav__inner -->
+
+<!-- Mobile drawer (injected by nav) -->
+<div class="nav__mobile-drawer" id="nav-mobile-drawer">
+  <a href="./index.html">분석</a>
+  <a href="./history.html">기록</a>
+  <a href="./community.html">커뮤니티</a>
+  <a href="./admin-login.html">관리자 <span class="nav__badge" style="font-size:.55rem">ADM</span></a>
+</div>
+</nav>
+
+<aside class="admin-sidebar">
+  <div style="padding:0 20px 20px;border-bottom:1px solid var(--clr-line);margin-bottom:12px">
+    <p class="text-label">관리자 패널</p>
+  </div>
+  <button class="admin-sidebar__item active" data-section="moderation" onclick="switchSection('moderation',this)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    신고 모더레이션
+    <span id="pending-badge" class="badge badge--pending" style="margin-left:auto;font-size:.55rem">0</span>
+  </button>
+  <button class="admin-sidebar__item" data-section="hashes" onclick="switchSection('hashes',this)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+    해시 검색
+  </button>
+  <button class="admin-sidebar__item" data-section="notices" onclick="switchSection('notices',this)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+    공지사항 관리
+  </button>
+  <button class="admin-sidebar__item" data-section="tuning" onclick="switchSection('tuning',this)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    로컬 포렌식 튜닝
+  </button>
+  <div style="padding:16px 20px 12px;margin-top:8px;border-top:1px solid var(--clr-line)">
+    <p class="text-label">빠른 링크</p>
+  </div>
+  <a href="./index.html" class="admin-sidebar__item" style="text-decoration:none">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    분석 페이지
+  </a>
+  <a href="./community.html" class="admin-sidebar__item" style="text-decoration:none">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    커뮤니티
+  </a>
+</aside>
+
+<div class="admin-content">
+
+  <!-- Stats -->
+  <div class="grid-4 mb-32 fade-up" style="gap:12px">
+    <div class="stat-card">
+      <div class="stat-card__label">신고된 게시물</div>
+      <div class="stat-card__value text-danger" id="admin-pending-count">—</div>
+      <div class="stat-card__sublabel">건</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">미확인 알림</div>
+      <div class="stat-card__value text-warn" id="admin-notif-count">—</div>
+      <div class="stat-card__sublabel">건</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">전체 분석</div>
+      <div class="stat-card__value text-accent" id="admin-total-count">—</div>
+      <div class="stat-card__sublabel">건</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">커뮤니티 게시물</div>
+      <div class="stat-card__value text-safe" id="admin-community-count">—</div>
+      <div class="stat-card__sublabel">건</div>
+    </div>
+  </div>
+
+  <!-- Moderation section -->
+  <section id="section-moderation" class="admin-section">
+    <div class="flex items-center justify-between mb-20">
+      <h2 class="text-title">신고 모더레이션</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" class="flex items-center">
+        <button class="btn btn--sm" data-mod-status="FLAGGED" style="background:var(--clr-danger-dim);color:var(--clr-danger);border:1px solid var(--clr-danger)">신고됨</button>
+        <button class="btn btn--ghost btn--sm" data-mod-status="ACTIVE">활성</button>
+        <button class="btn btn--ghost btn--sm" data-mod-status="DELETED">삭제됨</button>
+        <button class="btn btn--ghost btn--sm" data-mod-status="ALL">전체</button>
+      </div>
+    </div>
+
+    <div class="card" style="overflow:hidden">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>상태 / 신고수</th>
+              <th>미디어 / 파일</th>
+              <th>판별 결과 / 유형</th>
+              <th>신뢰도</th>
+              <th>게시 일시</th>
+              <th>코멘트</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="mod-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:rgba(255,255,255,.25)">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="mod-pager" class="flex items-center justify-end gap-8 mt-16"></div>
+  </section>
+
+  <!-- Hash search section -->
+  <section id="section-hashes" class="admin-section hidden">
+    <div class="flex items-center justify-between mb-20">
+      <h2 class="text-title">해시 판별 이력 검색</h2>
+    </div>
+
+    <!-- Filters -->
+    <div class="card p-24 mb-16 fade-up">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
+        <div class="form-group">
+          <label class="form-label">해시값 / 파일명</label>
+          <input class="form-input" id="hash-q" placeholder="검색어 입력..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">판별 결과</label>
+          <select class="form-select" id="hash-verdict">
+            <option value="">전체</option>
+            <option value="DEEPFAKE">DEEPFAKE</option>
+            <option value="SUSPICIOUS">SUSPICIOUS</option>
+            <option value="AUTHENTIC">AUTHENTIC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">날짜 범위</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" type="date" id="hash-date-from" style="flex:1" />
+            <span style="color:rgba(255,255,255,.3);font-size:.75rem">~</span>
+            <input class="form-input" type="date" id="hash-date-to" style="flex:1" />
+          </div>
+        </div>
+        <button id="hash-search-btn" class="btn btn--primary" style="height:42px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          검색
+        </button>
+      </div>
+      <div id="hash-total" style="font-family:var(--font-mono);font-size:.75rem;color:rgba(255,255,255,.3);margin-top:12px"></div>
+    </div>
+
+    <div class="card" style="overflow:hidden">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SHA-256 해시</th>
+              <th>파일명</th>
+              <th>판별</th>
+              <th>신뢰도</th>
+              <th>크기</th>
+              <th>분석 일시</th>
+            </tr>
+          </thead>
+          <tbody id="hash-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:rgba(255,255,255,.25)">검색 결과가 없습니다</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="hash-pager" class="flex items-center justify-end gap-8 mt-16"></div>
+  </section>
+
+  <!-- Notices section -->
+  <section id="section-notices" class="admin-section hidden">
+    <div class="card p-28 mb-24">
+      <h2 class="text-title mb-20">공지사항 관리</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+        <!-- 공지 작성 폼 -->
+        <div>
+          <h3 style="font-size:1rem;font-weight:600;margin-bottom:16px;color:rgba(255,255,255,.8)">새 공지 등록</h3>
+          <div class="form-group mb-14">
+            <label class="form-label">제목 *</label>
+            <input class="form-input" id="notice-title" placeholder="공지 제목을 입력하세요" maxlength="100" />
+          </div>
+          <div class="form-group mb-14">
+            <label class="form-label">내용 *</label>
+            <textarea class="form-textarea" id="notice-content" rows="6" placeholder="공지 내용을 입력하세요..." style="resize:vertical"></textarea>
+          </div>
+          <div class="form-group mb-20" style="display:flex;align-items:center;gap:10px">
+            <input type="checkbox" id="notice-pinned" style="width:16px;height:16px;accent-color:var(--clr-accent);cursor:pointer" />
+            <label for="notice-pinned" style="font-size:.875rem;color:rgba(255,255,255,.65);cursor:pointer">📌 최상단 고정</label>
+          </div>
+          <button class="btn btn--primary" id="notice-submit-btn">공지 등록</button>
+        </div>
+        <!-- 공지 목록 -->
+        <div>
+          <div class="flex items-center gap-10 mb-16">
+            <h3 style="font-size:1rem;font-weight:600;color:rgba(255,255,255,.8)">등록된 공지</h3>
+            <button class="btn btn--ghost btn--sm" onclick="DG.Admin.loadNotices()">새로고침</button>
+          </div>
+          <div id="notices-list" style="max-height:480px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tuning section -->
+  <section id="section-tuning" class="admin-section hidden">
+    <div class="card p-28 mb-24">
+      <h2 class="text-title mb-20">🛡️ 로컬 포렌식 튜닝 & 정확도 최적화</h2>
+      <p style="font-size:.875rem;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:24px">
+        로컬 포렌식 검출기(CFA, 조명, GAN, 파일, 기하학)의 모듈별 가중치와 최종 판정 임계값을 미세 조정하여 실제/가짜 이미지 판별 정확도를 최적화합니다.<br>
+        수동으로 조절하거나, 테스트 데이터셋을 통해 F1-Score를 극대화하는 최적 가중치 조합을 <strong>자동 최적화(Auto-Tune)</strong>할 수 있습니다.
+      </p>
+
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:32px;align-items:start">
+        
+        <!-- 왼쪽: 가중치 및 임계값 제어판 -->
+        <div>
+          <div style="margin-bottom:24px;border-bottom:1px solid var(--clr-line);padding-bottom:12px">
+            <h3 style="font-size:1.05rem;font-weight:700;color:var(--clr-accent)">🔧 가중치 & 임계값 설정</h3>
+          </div>
+
+          <!-- 가중치 슬라이더들 -->
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <label class="form-label" style="margin:0;font-weight:600">🔬 CFA 노이즈 가중치 (AI / DF)</label>
+                <span id="val-cfa" class="mono text-accent font-bold">0.25 / 0.22</span>
+              </div>
+              <input type="range" class="form-range" id="input-cfa" min="0" max="1" step="0.01" value="0.25" style="width:100%;accent-color:var(--clr-accent)">
+            </div>
+
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <label class="form-label" style="margin:0;font-weight:600">💡 조명 비일관성 가중치 (AI / DF)</label>
+                <span id="val-lighting" class="mono text-accent font-bold">0.18 / 0.18</span>
+              </div>
+              <input type="range" class="form-range" id="input-lighting" min="0" max="1" step="0.01" value="0.18" style="width:100%;accent-color:var(--clr-accent)">
+            </div>
+
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <label class="form-label" style="margin:0;font-weight:600">🤖 GAN 픽셀 검사 가중치 (AI / DF)</label>
+                <span id="val-gan" class="mono text-accent font-bold">0.20 / 0.18</span>
+              </div>
+              <input type="range" class="form-range" id="input-gan" min="0" max="1" step="0.01" value="0.20" style="width:100%;accent-color:var(--clr-accent)">
+            </div>
+
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <label class="form-label" style="margin:0;font-weight:600">📄 파일/비네팅 데이터 가중치 (AI / DF)</label>
+                <span id="val-file" class="mono text-accent font-bold">0.17 / 0.17</span>
+              </div>
+              <input type="range" class="form-range" id="input-file" min="0" max="1" step="0.01" value="0.17" style="width:100%;accent-color:var(--clr-accent)">
+            </div>
+
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <label class="form-label" style="margin:0;font-weight:600">📐 기하학 노이즈 가중치 (AI / DF)</label>
+                <span id="val-geo" class="mono text-accent font-bold">0.15 / 0.17</span>
+              </div>
+              <input type="range" class="form-range" id="input-geo" min="0" max="1" step="0.01" value="0.15" style="width:100%;accent-color:var(--clr-accent)">
+            </div>
+            
+            <div style="margin-top:10px;padding-top:16px;border-top:1px solid rgba(255,255,255,.05);display:flex;flex-direction:column;gap:18px">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <label class="form-label" style="margin:0;font-weight:600">🖼️ 이미지 위조 판정 임계값 (Fake Threshold)</label>
+                  <span id="val-img-fake" class="mono text-danger font-bold">0.38</span>
+                </div>
+                <input type="range" class="form-range" id="input-img-fake" min="0.1" max="0.9" step="0.01" value="0.38" style="width:100%;accent-color:var(--clr-danger)">
+              </div>
+
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <label class="form-label" style="margin:0;font-weight:600">🖼️ 이미지 의심 판정 임계값 (Suspicious Threshold)</label>
+                  <span id="val-img-susp" class="mono text-warn font-bold">0.22</span>
+                </div>
+                <input type="range" class="form-range" id="input-img-susp" min="0.05" max="0.8" step="0.01" value="0.22" style="width:100%;accent-color:var(--clr-warn)">
+              </div>
+
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <label class="form-label" style="margin:0;font-weight:600">🎬 비디오 위조 판정 임계값 (Fake Threshold)</label>
+                  <span id="val-vid-fake" class="mono text-danger font-bold">0.55</span>
+                </div>
+                <input type="range" class="form-range" id="input-vid-fake" min="0.1" max="0.9" step="0.01" value="0.55" style="width:100%;accent-color:var(--clr-danger)">
+              </div>
+
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <label class="form-label" style="margin:0;font-weight:600">🎬 비디오 의심 판정 임계값 (Suspicious Threshold)</label>
+                  <span id="val-vid-susp" class="mono text-warn font-bold">0.32</span>
+                </div>
+                <input type="range" class="form-range" id="input-vid-susp" min="0.05" max="0.8" step="0.01" value="0.32" style="width:100%;accent-color:var(--clr-warn)">
+              </div>
+            </div>
+
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:28px">
+            <button class="btn btn--primary" id="btn-save-weights" style="flex:1">💾 설정 저장 및 적용</button>
+            <button class="btn btn--outline-accent" id="btn-reset-weights">초기화</button>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 테스트 데이터셋 & 자동 최적화 -->
+        <div style="background:rgba(255,255,255,.01);border:1px solid var(--clr-line);border-radius:12px;padding:24px">
+          <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+            <h3 style="font-size:1.05rem;font-weight:700;color:var(--clr-safe);margin:0">📊 자동 테스트 및 성능 평가</h3>
+            <span id="dataset-count-badge" class="badge badge--safe" style="font-size:.7rem">0개 이미지 로드됨</span>
+          </div>
+
+          <!-- 데이터셋 옵션 -->
+          <div style="display:flex;gap:8px;margin-bottom:20px">
+            <button class="btn btn--sm btn--primary" id="btn-load-benchmark" style="font-size:.75rem">🔥 기본 벤치마크 데이터 로드 (추천)</button>
+            <button class="btn btn--sm btn--outline-accent" id="btn-clear-dataset" style="font-size:.75rem">비우기</button>
+          </div>
+
+          <!-- 파일 업로드 존 -->
+          <div id="tuning-upload-zone" style="border:2px dashed rgba(255,255,255,.1);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:20px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--clr-accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'">
+            <input type="file" id="tuning-file-input" multiple accept="image/*" style="display:none" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" style="margin:0 auto 8px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <p style="font-size:.82rem;color:rgba(255,255,255,.6);margin:0">검증용 테스트 이미지 파일 업로드 (일괄 선택 가능)</p>
+            <p style="font-size:.7rem;color:rgba(255,255,255,.35);margin:4px 0 0">업로드 시 개별 라벨링(실제/위조) 지정이 필요합니다</p>
+          </div>
+
+          <!-- 업로드된 파일 목록 -->
+          <div id="tuning-file-list" style="max-height:180px;overflow-y:auto;margin-bottom:20px;display:flex;flex-direction:column;gap:6px;border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:8px;background:rgba(0,0,0,.15)" class="hidden"></div>
+
+          <!-- 평가 실행 & 결과 표시 -->
+          <div id="eval-metrics-card" style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:16px;margin-bottom:20px" class="hidden">
+            <h4 style="font-size:.85rem;color:rgba(255,255,255,.5);margin:0 0 12px;font-family:var(--font-mono)">성능 지표 (Performance Metrics)</h4>
+            
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+              <div style="background:rgba(255,255,255,.02);padding:10px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,.03)">
+                <p style="font-size:.65rem;color:rgba(255,255,255,.4);margin-bottom:4px">F1-Score</p>
+                <p id="metric-f1" style="font-size:1.15rem;font-weight:800;color:var(--clr-accent)">0%</p>
+              </div>
+              <div style="background:rgba(255,255,255,.02);padding:10px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,.03)">
+                <p style="font-size:.65rem;color:rgba(255,255,255,.4);margin-bottom:4px">정확도 (Acc)</p>
+                <p id="metric-acc" style="font-size:1.15rem;font-weight:800;color:rgba(255,255,255,.8)">0%</p>
+              </div>
+              <div style="background:rgba(255,255,255,.02);padding:10px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,.03)">
+                <p style="font-size:.65rem;color:rgba(255,255,255,.4);margin-bottom:4px">정밀도 (Pre)</p>
+                <p id="metric-pre" style="font-size:1.15rem;font-weight:800;color:rgba(255,255,255,.8)">0%</p>
+              </div>
+              <div style="background:rgba(255,255,255,.02);padding:10px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,.03)">
+                <p style="font-size:.65rem;color:rgba(255,255,255,.4);margin-bottom:4px">재현율 (Rec)</p>
+                <p id="metric-rec" style="font-size:1.15rem;font-weight:800;color:rgba(255,255,255,.8)">0%</p>
+              </div>
+            </div>
+
+            <!-- 혼돈 행렬 (Confusion Matrix) -->
+            <div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:4px;font-size:.72rem;font-family:var(--font-mono);max-width:320px;margin:0 auto">
+              <div></div>
+              <div style="text-align:center;font-weight:700;color:var(--clr-danger)">예측: 위조</div>
+              <div style="text-align:center;font-weight:700;color:var(--clr-safe)">예측: 실제</div>
+              
+              <div style="font-weight:700;display:flex;align-items:center;color:var(--clr-danger)">실제: 위조</div>
+              <div id="cm-tp" style="background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.2);border-radius:4px;padding:8px;text-align:center;font-weight:bold;color:var(--clr-danger)">TP: 0</div>
+              <div id="cm-fn" style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:4px;padding:8px;text-align:center;color:rgba(255,255,255,.4)">FN: 0</div>
+              
+              <div style="font-weight:700;display:flex;align-items:center;color:var(--clr-safe)">실제: 실제</div>
+              <div id="cm-fp" style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:4px;padding:8px;text-align:center;color:rgba(255,255,255,.4)">FP: 0</div>
+              <div id="cm-tn" style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:4px;padding:8px;text-align:center;font-weight:bold;color:var(--clr-safe)">TN: 0</div>
+            </div>
+          </div>
+
+          <!-- 개별 이미지 상세 결과 테이블 -->
+          <div style="margin-top:12px">
+            <div style="font-size:.72rem;color:rgba(255,255,255,.35);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+              <span>개별 판정 결과</span>
+              <span style="font-size:.65rem;background:rgba(255,255,255,.05);padding:1px 6px;border-radius:999px">실제 라벨 → 예측 라벨 | 점수</span>
+            </div>
+            <div id="eval-detail-table" style="max-height:200px;overflow-y:auto;border:1px solid rgba(255,255,255,.05);border-radius:6px"></div>
+          </div>
+
+          <!-- 최적화 버튼 -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <button class="btn btn--primary" id="btn-run-optimization" disabled style="background:linear-gradient(135deg, var(--clr-accent), #4285f4);border:none;height:46px;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              가중치 & 임계값 자동 최적화 시작
+            </button>
+            <p id="opt-hint-text" style="font-size:.72rem;color:rgba(255,255,255,.3);text-align:center;margin:0">평가를 실행하려면 먼저 [기본 벤치마크 데이터 로드] 버튼을 누르거나 이미지 파일을 드래그해 오세요.</p>
+          </div>
+
+          <!-- 최적화 전후 성능 도표 -->
+          <div id="opt-comparison-card" style="margin-top:20px;border-top:1px solid rgba(255,255,255,.08);padding-top:16px" class="hidden">
+            <h4 style="font-size:.85rem;color:var(--clr-accent);margin:0 0 12px;font-weight:700">📈 자동 최적화 결과 (전 vs 후)</h4>
+            <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;font-size:.78rem;font-family:var(--font-mono);border-bottom:1px solid rgba(255,255,255,.04);padding-bottom:8px;margin-bottom:8px">
+              <div style="color:rgba(255,255,255,.4)">지표</div>
+              <div style="color:rgba(255,255,255,.4);text-align:right">최적화 전</div>
+              <div style="color:var(--clr-accent);text-align:right;font-weight:700">최적화 후</div>
+              
+              <div>F1-Score</div>
+              <div id="opt-before-f1" style="text-align:right">0%</div>
+              <div id="opt-after-f1" style="text-align:right;color:var(--clr-accent);font-weight:700">0%</div>
+
+              <div>정확도 (Accuracy)</div>
+              <div id="opt-before-acc" style="text-align:right">0%</div>
+              <div id="opt-after-acc" style="text-align:right;color:rgba(255,255,255,.9)">0%</div>
+
+              <div>정밀도 (Precision)</div>
+              <div id="opt-before-pre" style="text-align:right">0%</div>
+              <div id="opt-after-pre" style="text-align:right;color:rgba(255,255,255,.9)">0%</div>
+
+              <div>재현율 (Recall)</div>
+              <div id="opt-before-rec" style="text-align:right">0%</div>
+              <div id="opt-after-rec" style="text-align:right;color:rgba(255,255,255,.9)">0%</div>
+            </div>
+            
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn--sm btn--primary" id="btn-apply-opt-weights" style="flex:1;font-size:.75rem">✅ 최적화 가중치 수치 대입</button>
+              <button class="btn btn--sm btn--outline-accent" id="btn-discard-opt" style="font-size:.75rem">취소</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal__header">
+      <h3 id="modal-title" style="font-size:1.125rem;font-weight:700"></h3>
+      <button class="btn btn--ghost btn--icon" style="margin-left:auto" onclick="DG.Modal.close()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal__body" id="modal-body"></div>
+    <div class="modal__footer">
+      <button id="modal-cancel-btn" class="btn btn--ghost btn--sm">취소</button>
+      <button id="modal-confirm-btn" class="btn btn--primary btn--sm">확인</button>
+    </div>
+  </div>
+</div>
+
+<script src="./env.js"></script>
+<script src="./js/core.js"></script>
+<script src="./js/admin.js"></script>
+<script>
+  function switchSection(name, btn) {
+    document.querySelectorAll('.admin-sidebar__item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[id^="section-"]').forEach(s => s.classList.add('hidden'));
+    btn.classList.add('active');
+    const sec = document.getElementById('section-' + name);
+    if (sec) sec.classList.remove('hidden');
+    // 공지 섹션 진입 시 자동 로드
+    if (name === 'notices') DG.Admin.loadNotices?.();
+    if (name === 'tuning') DG.Admin.loadTuningSection?.();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.DG || !DG.Auth || !DG.Auth.isAdmin()) {
+      window.location.href = './admin-login.html';
+      return;
+    }
+    DG.Admin.init();
+  });
+</script>
+
+<script>
+/* Mobile nav toggle */
+(function() {
+  var btn = document.getElementById('nav-hamburger');
+  var drawer = document.getElementById('nav-mobile-drawer');
+  if (!btn || !drawer) return;
+  // Mark current page link active
+  var links = drawer.querySelectorAll('a');
+  links.forEach(function(a) {
+    if (a.href.split('/').pop() === location.pathname.split('/').pop()) {
+      a.classList.add('active');
+    }
+  });
+  btn.addEventListener('click', function() {
+    var open = drawer.classList.toggle('is-open');
+    btn.classList.toggle('is-open', open);
+    btn.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+  });
+  // Close on outside click
+  document.addEventListener('click', function(e) {
+    if (!btn.contains(e.target) && !drawer.contains(e.target)) {
+      drawer.classList.remove('is-open');
+      btn.classList.remove('is-open');
+    }
+  });
+})();
+</script>
+<script>
+/* NHN Cloud theme toggle */
+(function(){
+  var btn=document.getElementById("theme-toggle-btn");
+  if(!btn)return;
+  btn.addEventListener("click",function(){
+    var cur=document.documentElement.getAttribute("data-theme")||"dark";
+    var next=cur==="dark"?"light":"dark";
+    document.documentElement.setAttribute("data-theme",next);
+    localStorage.setItem("dg_theme",next);
+  });
+})();
+</script>
+</body>
+</html>
