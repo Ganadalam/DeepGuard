@@ -1,5 +1,5 @@
 /**
- * DeepGuard Pro v4 — Analysis Worker (Enhanced Forensics)
+ * DeepGuard Pro — Analysis Worker (Enhanced Forensics)
  * 추가된 분석 모듈:
  *   1. CFA 노이즈 매핑  2. 조명 메타데이터  3. GAN 픽셀 검사
  *   4. 이진 파일 데이터 분석  5. 기하학 노이즈 매핑

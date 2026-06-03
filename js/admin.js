@@ -1,5 +1,5 @@
 /**
- * DeepGuard Pro v9 — Admin & Community Module
+ * DeepGuard Pro — Admin & Community Module
  * 신고 알림 시스템 · 게시물 삭제 권한 · 딥페이크/AI 생성 구분 표시
  */
 (function () {

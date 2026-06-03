@@ -277,6 +277,7 @@ h1, h2, h3, h4, h5 {
   border: 1px solid var(--clr-line);
   transition: border-color 0.15s, color 0.15s;
   flex-shrink: 0;
+  margin-right: 12px;
 }
 .nav__status:hover { border-color: var(--clr-brand); color: var(--clr-text); }
 .status-dot {

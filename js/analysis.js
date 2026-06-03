@@ -1,5 +1,5 @@
 /**
- * DeepGuard Pro — Analysis Engine v4
+ * DeepGuard Pro — Analysis Engine 
  * Deepfake + AI-Generated Image Detection · Upload fix · PDF 개선
  */
 (function () {
