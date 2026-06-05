@@ -28,7 +28,7 @@ Google Gemini Vision AI와 로컬 픽셀 포렌식을 병렬 실행해 이중으
 | **암호화** | Web Crypto API (SHA-256) | 브라우저 내장 API로 외부 라이브러리 없이 파일 식별 해시 생성 |
 | **Backend** | Node.js 18+, Express 4 | Gemini API 키를 서버에만 보관해 브라우저 소스코드 노출 차단; 프론트와 동일 언어(JS)로 풀스택 단일 언어 유지 |
 | **AI 판별** | Google Gemini (`gemini-flash-latest`) Vision API | 무료 티어 제공, 멀티모달 Vision 지원, Chain-of-Thought 프롬프트로 단계별 추론 가능 |
-| **로컬 포렌식** | Canvas 픽셀 분석 (CFA·GAN·조명·비네팅·기하학) | Gemini API 미설정 환경에서도 오프라인 판별 가능; API 호출 비용 없이 물리적 위변조 흔적 보완 탐지 |
+| **로컬 포렌식** | Canvas 픽셀 분석 (CFA·GAN·조명·파일·기하학) | Gemini API 미설정 환경에서도 오프라인 판별 가능; API 호출 비용 없이 물리적 위변조 흔적 보완 탐지 |
 | **상태 관리** | 자체 구현 Observable Store (빌드 도구 없는 Observer 패턴) | 번들러가 없어 React/Vue 등 npm 패키지를 프론트에서 직접 import 불가 — Observer 패턴을 Vanilla JS로 직접 구현 |
 | **저장소** | In-memory Map (서버 재시작 시 초기화) | 교육·데모 목적의 프로젝트로 외부 DB 의존성 제거, 설치·실행 단순화 |
 
@@ -101,7 +101,7 @@ deepguard/
    ├─ CFA 노이즈 매핑                    Chain-of-Thought 프롬프트
    ├─ 조명 비일관성                      → aiVerdict / aiConfidence
    ├─ GAN 체커보드 아티팩트              → deepfakeVerdict / deepfakeConfidence
-   ├─ 비네팅 분석
+   ├─ 파일 데이터 분석
    └─ 기하학 왜곡
          │                                        │
          └────────────────┬───────────────────────┘
@@ -123,7 +123,9 @@ deepguard/
 | 이미지 | 38% 이상 | 22 ~ 38% | 22% 미만 |
 | 영상 | 55% 이상 | 32 ~ 55% | 32% 미만 |
 
-> Gemini 판정이 있을 때는 `aiVerdict`/`deepfakeVerdict` 기반으로 verdict를 결정하고, 강한 포렌식 신호(2개 이상 모듈 동시 활성)가 있을 때는 포렌식 점수로 오버라이드합니다.
+> Gemini 판정이 있을 때는 `aiVerdict`/`deepfakeVerdict` 기반으로 verdict를 결정합니다. 강한 포렌식 신호가 감지되면 포렌식 점수로 오버라이드합니다. 오버라이드 조건은 세 가지 중 하나를 충족해야 합니다: ① 포렌식 종합 점수 0.45 이상 + 독립 모듈 2개 이상 강신호, ② CFA(해상도 보정 후) + 조명 점수가 동시에 0.60 이상, ③ 모듈 4개 이상이 동시에 강신호.
+
+> **모듈별 강신호 임계값:** CFA(해상도 보정값 `cfaScoreEffective`) > **0.55**, 조명·GAN·파일·기하학 각 > **0.45**. CFA는 저해상도에서 `cfaTrust`로 보정된 유효값(`cfaScoreEffective`)을 사용하므로 원본 `cfaScore`와 다를 수 있습니다. CFA 단독 고점(JPEG 압축·리사이즈 왜곡 등)에 의한 오탐을 방지하기 위해 반드시 2개 이상의 독립 모듈이 동시에 임계값을 초과해야 합니다.
 
 > **최종 verdict 값:** 분석 엔진(`analyzer.worker.js`)이 생성하는 verdict는 `FAKE` / `SUSPICIOUS` / `AUTHENTIC` 세 가지입니다. 단, 서버는 클라이언트가 POST로 전송한 verdict를 검증 없이 저장하므로(`server.js` `/api/analyses`), 외부 입력으로 `DEEPFAKE` 등 임의 값이 DB에 기록될 수 있습니다. 이 때문에 관리자 통계의 `fakeCount`는 `FAKE || DEEPFAKE`로 집계됩니다(`server.js:472`).
 
@@ -223,13 +225,41 @@ self.onmessage = async ({ data: { type, payload } }) => {
 
 // analyzeSegment 내부 (요약)
 async function analyzeSegment({ frames }) {
+  const dfScores = [], aiScores = [], combined = [];
+  let geminiResult = null;
+  const isImage = frames.length === 1;
+  const allSignals = [];
+
+  // Gemini 호출을 먼저 Promise로 선발행 (최대 2개 프레임만)
+  const gPs = [];
+  for (let i = 0; i < Math.min(2, frames.length); i++) {
+    const p = bitmapToBase64(frames[i].imageBitmap);
+    gPs.push(
+      p.then(b64 => callServerAI(b64, !isImage))
+       .catch(() => null) // 실패 시 null로 대체 — 로컬 결과로 계속 진행
+    );
+  }
+
   for (let i = 0; i < frames.length; i++) {
-    const { imageBitmap } = frames[i];
-    const hS = extractFeatures(imageBitmap);          // 로컬 포렌식
-    const serverAI = await callServerAI(...);         // Gemini (실패 시 null)
-    const scores = blend(hS, serverAI);               // 가중치 결합
-    imageBitmap.close(); // GPU 메모리 즉시 해제 (best practice)
-    postMessage({ type: "FRAME_RESULT", payload: { ...scores } });
+    const { imageBitmap, frameIndex, timestamp } = frames[i];
+    const hS = extractFeatures(imageBitmap);           // 로컬 포렌식
+    allSignals.push(hS._signals);
+    let serverAI = null;
+    if (i < gPs.length) {
+      serverAI = await gPs[i];                         // Gemini (실패 시 null)
+      if (i === 0) geminiResult = serverAI;
+    }
+    const scores = blend(hS, serverAI);                // 가중치 결합
+    const cS = Math.max(scores.df, scores.ai);         // df·ai 중 높은 값 사용
+    dfScores.push(scores.df); aiScores.push(scores.ai); combined.push(cS);
+    imageBitmap.close();                               // GPU 메모리 즉시 해제
+    postMessage({ type: "FRAME_RESULT", payload: {
+      confidence: cS, dfConfidence: scores.df, aiConfidence: scores.ai,
+      smoothedConfidence: smooth(combined, WINDOW_SIZE),
+      frameIndex, timestamp, progress: (i + 1) / frames.length,
+      geminiActive: !!serverAI, forensicSignals: hS._signals,
+    }});
+    if (i % 8 === 0) await new Promise(r => setTimeout(r, 0)); // UI 양보
   }
   postMessage({ type: "ANALYSIS_COMPLETE", payload: { verdict, avgConfidence, ... } });
 }
@@ -324,12 +354,10 @@ function analyzeGANPixels(d, sz) {
   }
   const checkerArtifact = checkerSum / (sz/2 * sz/2 * 255 * 2);
 
-  // 3. 블록 경계 점수 (blockBoundary) + 4. 방사형 밝기 엔트로피 (radialEnt) 계산 후
-  // 4개 지표 가중 합산
   const ganScore = Math.max(0, Math.min(1,
-    evenOddBias*0.20 + checkerArtifact*8*0.25 +
-    (blockBoundary<0.01 ? 0.30 : blockBoundary<0.02 ? 0.10 : 0)*0.25 +
-    (1 - radialEnt)*0.30
+    evenOddBias * 0.20 + checkerArtifact * 8 * 0.25 +
+    (blockBoundary < 0.01 ? 0.30 : blockBoundary < 0.02 ? 0.10 : 0) * 0.25 +
+    (1 - radialEnt) * 0.30
   ));
   return { ganScore, evenOddBias, checkerArtifact, blockBoundary, radialEnt };
 }
@@ -337,7 +365,7 @@ function analyzeGANPixels(d, sz) {
 
 #### 4-3. 조명 비일관성 분석
 
-이미지를 4×4 = 16개 구역으로 분할해 각 구역의 평균 밝기를 계산합니다. 가장 밝은 구역(하이라이트)과 인접 구역 사이에 물리적으로 불가능한 밝기 낙차가 있으면 조작 신호로 판단합니다.
+이미지를 4×4 = 16개 구역으로 분할해 각 구역의 평균 밝기와 하이라이트(RGB 모두 240 이상인 픽셀) 비율을 계산합니다. 하이라이트가 가장 많은 구역의 행(row)과 전체 평균 밝기가 가장 높은 구역의 행이 일치하지 않으면 조명 비일관성 신호로 판단합니다. 추가로 수직 밝기 기울기(상단 행 평균 − 하단 행 평균)와 그림자 방향 일관성도 함께 반영합니다.
 
 #### 4-4. 파일 데이터 포렌식 (`analyzeFileDataProxy`)
 
@@ -349,13 +377,13 @@ function analyzeGANPixels(d, sz) {
 // js/analyzer.worker.js
 // center / (edge + 1) 비율로 중앙 대비 주변부 밝기 편차 측정
 const vigR = (cB / cC) / (eB / eC + 1);
-// vigR < 1.03: AI 판정 가능성 높음 (0.35점)
-// vigR < 1.05: AI 판정 가능성 중간 (0.15점)
+// vigR < 1.03: 비네팅 없음 → AI 판정 가능성 높음 (0.35점)
+// vigR < 1.05: 비네팅 약함 → AI 판정 가능성 중간 (0.15점)
 ```
 
 #### 4-5. 기하학 왜곡 분석
 
-실제 광학 렌즈는 미세한 왜곡과 색수차(Chromatic Aberration, RGB 채널 간 미세 위치 차이)를 남깁니다. 수평·수직 직선의 연속성과 RGB 채널 간 정렬 오차를 분석합니다.
+수평 스캔라인 기울기 자기상관(`lineCons`), 에지 방향 엔트로피(`angleEntropy`), 8×8 블록 간 밝기 매끄러움(`blockSmooth`) 세 지표를 계산합니다. AI 생성 이미지는 에지 방향이 지나치게 균등하거나(엔트로피 높음) 블록 경계가 과도하게 매끄러운 경향이 있습니다.
 
 ---
 
@@ -427,17 +455,32 @@ async function computeSHA256(file, onProgress) {
 // js/core.js
 const Store = (() => {
   const _state = {
+    currentPage: 'analyze',
     analysis: {
-      analysisStatus: "idle", // idle | ready | analyzing | complete | error
+      file: null,
+      hash: null,
+      hashStatus: 'idle',       // idle | hashing | checking | cached | new
+      hashProgress: 0,
+      analysisStatus: 'idle',   // idle | ready | analyzing | complete | error
+      analysisProgress: 0,
+      frameResults: [],
+      overallResult: null,
+      suspiciousScreenshots: [],
       liveConfidence: 0,
       frameCount: 0,
-      overallResult: null,
+    },
+    admin:      { user: null, token: null, role: null },
+    community:  { reports: [], total: 0, page: 1 },
+    moderation: { reports: [], total: 0, statusFilter: 'PENDING', page: 1 },
+    hashSearch: {
+      results: [], total: 0, page: 1,
+      filters: { q: '', verdict: '', dateFrom: '', dateTo: '' },
     },
   };
   const listeners = {};
 
   return {
-    get(key) { return _state[key]; },
+    get(key) { return key ? _state[key] : _state; },
 
     set(key, patch) {
       // 객체면 shallow merge, 아니면 전체 교체
@@ -446,9 +489,11 @@ const Store = (() => {
       else _state[key] = patch;
 
       (listeners[key] || []).forEach((fn) => fn(_state[key]));
+      (listeners['*']  || []).forEach((fn) => fn(_state));   // 전체 구독자에도 브로드캐스트
     },
 
     // 구독 등록 — 반환 함수 호출로 구독 해제 (메모리 누수 방지)
+    // key='*' 로 전체 상태 변경 구독 가능
     on(key, fn) {
       if (!listeners[key]) listeners[key] = [];
       listeners[key].push(fn);
@@ -508,36 +553,37 @@ app.get("/api/url-image-proxy", async (req, res) => {
 
 ### 9. Gemini Chain-of-Thought 프롬프트
 
-"딥페이크냐?"라고 단순히 묻는 대신, 단계별 추론을 요구해 판단 정확도를 높입니다.
+"딥페이크냐?"라고 단순히 묻는 대신, 단계별 추론을 요구해 판단 정확도를 높입니다. 프롬프트는 한국어로 작성되어 있으며, 이미지용(`IMAGE_PROMPT`)과 영상 프레임용(`VIDEO_FRAME_PROMPT`) 두 가지로 분리됩니다.
 
 ```js
-// server.js
-const IMAGE_PROMPT = `You are a forensic AI expert. Analyze step by step:
+// server.js — IMAGE_PROMPT (요약)
+const IMAGE_PROMPT = `당신은 최고 수준의 시각 포렌식 및 AI/딥페이크 탐지 전문 시스템입니다.
 
-STEP 1 - Lighting & reflections:
-  Check: eye highlight positions, shadow direction consistency across the face
-STEP 2 - Anatomy:
-  Check: finger count/joints, teeth regularity, ear structure detail
-STEP 3 - Texture & boundaries:
-  Check: skin smoothness anomalies, background blending artifacts
-STEP 4 - Deepfake signals:
-  Check: face boundary blur, hairline resolution drop vs background
+[분석 지침 (Chain of Thought)]
+결론을 내리기 전에, 아래 단계에 따라 시각적 단서를 꼼꼼히 역추적하세요:
+1. 조명 및 반사: 눈동자의 인공적 하이라이트 비대칭성, 그림자의 방향이 광원과 일치하는지?
+2. 해부학 및 인체 구조: 손가락 형태와 개수, 치아 크기/배열, 귀의 복잡한 구조가 자연스러운지?
+3. 텍스처 및 결합: 피부가 플라스틱처럼 지나치게 매끈한지, 배경 피사체가 이상하게 융합되었는지?
+4. 딥페이크 특화 신호: 얼굴 경계선(턱선, 헤어라인) 부근의 해상도 저하나 비정상적인 블러링 처리 유무.
 
-Respond ONLY with valid JSON (no markdown fences):
+반드시 아래 JSON 형식으로만 최종 응답 (마크다운/백틱 없이):
 {
-  "aiVerdict":          "authentic" | "ai_generated",
-  "deepfakeVerdict":    "authentic" | "deepfake" | "uncertain",
-  "aiConfidence":       0.0 ~ 1.0,
-  "deepfakeConfidence": 0.0 ~ 1.0,
-  "reasoning":          "brief explanation"
+  "analysisSteps": ["광원 분석: ...", "해부학 분석: ...", "텍스처 및 딥페이크 흔적: ..."],
+  "aiVerdict":          "AI_GENERATED" | "LIKELY_AI" | "UNCERTAIN" | "LIKELY_REAL" | "AUTHENTIC",
+  "aiConfidence":       0~100,
+  "aiCategory":         "Diffusion 모델" | "GAN 생성" | "딥페이크 합성" | "실제 사진" | "편집된 사진" | "불분명",
+  "aiSignals":          ["구체적인 의심 신호 1", "의심 신호 2"],
+  "aiReasoning":        "최종 판단 근거 (한국어 150자 이내)",
+  "deepfakeVerdict":    "DEEPFAKE" | "LIKELY_DEEPFAKE" | "UNCERTAIN" | "AUTHENTIC",
+  "deepfakeConfidence": 0~100
 }`;
+```
 
+영상 프레임용(`VIDEO_FRAME_PROMPT`)은 얼굴 합성 특화 지침(안면 경계선, 이목구비 왜곡, 노이즈 분포)으로 구성되며 JSON 구조는 동일합니다.
+
+```js
 // Gemini 응답 후처리: 마크다운 코드블록 제거 후 파싱
-let text = response.candidates[0].content.parts[0].text;
-text = text
-  .replace(/^```(?:json)?\s*/i, "")
-  .replace(/\s*```$/m, "")
-  .trim();
+text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/m, "").trim();
 const parsed = JSON.parse(text);
 ```
 
