@@ -2,9 +2,8 @@
 
 **딥페이크·AI 생성 이미지 실시간 판별 플랫폼** 
 
-
-Google Gemini Vision AI와 로컬 픽셀 포렌식을 병렬 실행해 이중으로 판별합니다.  
-빌드 도구 없이 Vanilla JS + Node.js만으로 구현한 풀스택 AI 응용 프로젝트입니다.
+**Google Gemini Vision AI와 로컬 픽셀 포렌식을 병렬 실행해 이중으로 판별합니다.**  
+**빌드 도구 없이 Vanilla JS + Node.js만으로 구현한 풀스택 AI 응용 프로젝트입니다.**
 ---
 
 ## 주요 기능
