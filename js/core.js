@@ -68,13 +68,13 @@ const Store = (() => {
 })();
 
 /* ─── API Client ──────────────────────────────────────────── */
-const API_BASE = (window.DG_ENV && window.DG_ENV.API_BASE) || '/api';
+const API_BASE = (window.DG_ENV && window.DG_ENV.API_BASE) || '';
 
 const API = {
   async request(method, path, body, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(API_BASE + path, {
+    const res = await fetch(API_BASE + '/api' + path, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,

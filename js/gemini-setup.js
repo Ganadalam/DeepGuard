@@ -5,6 +5,7 @@
   'use strict';
 
   const STORAGE_KEY = 'dg_gemini_key';
+  const API_BASE = (window.DG_ENV && window.DG_ENV.API_BASE) || '';
 
   /* ─── API 키 저장/복원 ─────────────────────────────────── */
   function getSavedKey() {
@@ -16,7 +17,7 @@
 
   /* ─── 서버에 API 키 전달 ───────────────────────────────── */
   async function configureServer(apiKey) {
-    const res = await fetch('/api/ai-detect/configure', {
+    const res = await fetch(API_BASE + '/api/ai-detect/configure', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKey }),
@@ -31,7 +32,7 @@
   /* ─── 상태 체크 ────────────────────────────────────────── */
   async function checkStatus() {
     try {
-      const d = await fetch('/api/ai-detect/status').then(r => r.json());
+      const d = await fetch(API_BASE + '/api/ai-detect/status').then(r => r.json());
       updateStatusUI(d.geminiConfigured);
       return d;
     } catch {
@@ -140,7 +141,7 @@
     if (input) input.value = '';
     const msg = document.getElementById('gemini-modal-msg');
     if (msg) { msg.style.color='rgba(255,255,255,.4)'; msg.textContent='키가 초기화되었습니다'; }
-    fetch('/api/ai-detect/configure', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({apiKey:'invalid_clear'}) }).catch(()=>{});
+    fetch(API_BASE + '/api/ai-detect/configure', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({apiKey:'invalid_clear'}) }).catch(()=>{});
     updateStatusUI(false);
   }
 

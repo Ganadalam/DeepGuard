@@ -27,7 +27,7 @@
   function initWorker() {
     worker = new Worker('./js/analyzer.worker.js');
     worker.onmessage = handleWorkerMsg;
-    worker.postMessage({ type: 'INIT' });
+    worker.postMessage({ type: 'INIT', payload: { apiBase: (window.DG_ENV && window.DG_ENV.API_BASE) || '' } });
   }
 
   function handleWorkerMsg({ data: { type, payload } }) {
@@ -172,7 +172,7 @@
         // cross-origin 이미지면 서버 프록시로 재시도
         if (img.src && !img.src.startsWith('blob:') && !img.src.startsWith('data:') && !img.src.startsWith(location.origin)) {
           try {
-            const proxyRes = await fetch(`/api/url-image-proxy?url=${encodeURIComponent(img.src)}`);
+            const proxyRes = await fetch(`${(window.DG_ENV && window.DG_ENV.API_BASE) || ''}/api/url-image-proxy?url=${encodeURIComponent(img.src)}`);
             if (proxyRes.ok) {
               const { base64, mimeType } = await proxyRes.json();
               const byteStr = atob(base64);
@@ -331,7 +331,7 @@
           Store.set('analysis',{inputType:'image'});
           // 서버 프록시로 미디어 데이터 미리 확보 (공유/캡처용)
           if (window.DG_ENV?.URL_IMAGE_PROXY !== false) {
-            fetch(`/api/url-image-proxy?url=${encodeURIComponent(meta.mediaUrl)}`)
+            fetch(`${(window.DG_ENV && window.DG_ENV.API_BASE) || ''}/api/url-image-proxy?url=${encodeURIComponent(meta.mediaUrl)}`)
               .then(r => r.ok ? r.json() : null)
               .then(d => {
                 if (d && d.base64) {
@@ -358,7 +358,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--clr-accent)" stroke-width="2" style="flex-shrink:0;animation:spin 1.2s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
           <p style="font-size:.8125rem;color:${tc(0.45,0.55)}">링크 본문 AI 작성 비율 분석 중…</p>
         </div>`;
-        fetch('/api/url-text-analyze', {
+        fetch(`${(window.DG_ENV && window.DG_ENV.API_BASE) || ''}/api/url-text-analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: urlStr }),

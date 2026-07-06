@@ -8,8 +8,8 @@ window.DG_ENV = {
   APP_NAME: 'DeepGuard Pro',
   APP_VERSION: 'v13',
 
-  // 서버 API 베이스 경로 (기본: /api)
-  API_BASE: '/api',
+  // 서버 오리진 (프론트/백엔드 분리 배포 — Render 백엔드). 같은 오리진이면 빈 문자열('').
+  API_BASE: 'https://deepguard-ku5z.onrender.com',
 
   // 커뮤니티 게시물당 기본 페이지 크기
   COMMUNITY_PAGE_SIZE: 12,

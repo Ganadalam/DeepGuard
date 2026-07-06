@@ -6,6 +6,7 @@
  */
 
 const WINDOW_SIZE = 7;
+let API_BASE = '';
 
 // 동적 로컬 포렌식 가중치 및 판정 임계값 설정
 let CONFIG = {
@@ -412,7 +413,7 @@ async function callServerAI(base64,isFrame) {
   if(!base64)return null;
   try {
     const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),20000);
-    const res=await fetch('/api/ai-detect/image',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch(API_BASE+'/api/ai-detect/image',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({imageBase64:base64,mimeType:'image/jpeg',isFrame}),signal:ctrl.signal});
     clearTimeout(timer);
     if(!res.ok){
@@ -629,8 +630,9 @@ async function analyzeSegment({frames}) {
 self.onmessage=async({data:{type,payload}})=>{
   switch(type){
     case 'INIT':
+      API_BASE = payload?.apiBase || '';
       try {
-        const res = await fetch('/api/forensics/weights');
+        const res = await fetch(API_BASE+'/api/forensics/weights');
         if (res.ok) {
           const loadedConfig = await res.json();
           CONFIG = { ...CONFIG, ...loadedConfig };

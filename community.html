@@ -325,7 +325,7 @@
     const et=getMyTokens()[pid];
     if(!et){Toast.error('삭제 권한 없음');return;}
     try{
-      await fetch(`/api/community/posts/${pid}`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({editToken:et})});
+      await API.delete(`/community/posts/${pid}`,{editToken:et});
       const el=document.getElementById(`pcard-${pid}`);
       if(el){el.style.transition='opacity .3s,height .3s';el.style.opacity='0';setTimeout(()=>{el.style.height=el.offsetHeight+'px';setTimeout(()=>{el.style.height='0';el.style.overflow='hidden';setTimeout(()=>el.remove(),300)},50)},300);}
       Toast.success('삭제되었습니다');loadStats();
