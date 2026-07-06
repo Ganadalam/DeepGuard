@@ -52,11 +52,11 @@
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--clr-danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 <h2 style="font-size:1.5rem;font-weight:800;color:var(--clr-danger);margin:0">분석 실패 (오류 발생)</h2>
               </div>
-              <p style="font-size:1rem;color:rgba(255,255,255,.8);line-height:1.6">AI 분석 통신 중 문제가 발생하여 신뢰할 수 없는 위조 분석을 방지하기 위해 프로세스를 차단했습니다.</p>
+              <p style="font-size:1rem;color:${tc(0.8,0.75)};line-height:1.6">AI 분석 통신 중 문제가 발생하여 신뢰할 수 없는 위조 분석을 방지하기 위해 프로세스를 차단했습니다.</p>
               <div style="background:rgba(0,0,0,.3);border-left:3px solid var(--clr-danger);padding:12px;margin-top:16px;border-radius:4px">
                 <p style="font-size:.85rem;color:var(--clr-danger);font-family:var(--font-mono)">${payload}</p>
               </div>
-              <p style="font-size:.85rem;color:rgba(255,255,255,.5);margin-top:16px">👉 API 키의 월간 한도(Quota)가 초과되었거나 서버 연결이 원활하지 않습니다. 좌측 메뉴에서 구글 계정을 변경하거나 API 키를 새로 발급받아 등록해 주세요.</p>
+              <p style="font-size:.85rem;color:${tc(0.5,0.55)};margin-top:16px">👉 API 키의 월간 한도(Quota)가 초과되었거나 서버 연결이 원활하지 않습니다. 좌측 메뉴에서 구글 계정을 변경하거나 API 키를 새로 발급받아 등록해 주세요.</p>
             </div>
           `;
           section.classList.remove('hidden');
@@ -356,7 +356,7 @@
         textSec.classList.remove('hidden');
         textSec.innerHTML = `<div style="margin-top:16px;padding:14px 18px;background:var(--clr-surface-2);border:1px solid rgba(0,200,255,.15);border-radius:var(--radius-md);display:flex;align-items:center;gap:10px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--clr-accent)" stroke-width="2" style="flex-shrink:0;animation:spin 1.2s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-          <p style="font-size:.8125rem;color:rgba(255,255,255,.45)">링크 본문 AI 작성 비율 분석 중…</p>
+          <p style="font-size:.8125rem;color:${tc(0.45,0.55)}">링크 본문 AI 작성 비율 분석 중…</p>
         </div>`;
         fetch('/api/url-text-analyze', {
           method: 'POST',
@@ -405,17 +405,17 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--clr-accent)" stroke-width="2" style="flex-shrink:0"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           <p style="font-size:.78rem;font-weight:700;color:var(--clr-accent);margin:0;text-transform:uppercase;letter-spacing:.06em">링크 본문 AI 작성 분석</p>
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-            <span style="font-size:.72rem;color:rgba(255,255,255,.35)">AI 작성 추정</span>
+            <span style="font-size:.72rem;color:${tc(0.35,0.45)}">AI 작성 추정</span>
             <span style="font-family:var(--font-mono);font-size:1.25rem;font-weight:800;color:${ratioCls}">${aiWrittenRatio}%</span>
           </div>
         </div>
-        ${summary ? `<div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.05);background:rgba(0,0,0,.2)">
-          <p style="font-size:.68rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-family:var(--font-mono)">본문 요약</p>
-          <p style="font-size:.875rem;color:rgba(255,255,255,.72);line-height:1.7">${escHtml(summary)}</p>
+        ${summary ? `<div style="padding:14px 18px;border-bottom:1px solid var(--clr-line);background:var(--clr-surface-1)">
+          <p style="font-size:.68rem;color:${tc(0.3,0.4)};text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-family:var(--font-mono)">본문 요약</p>
+          <p style="font-size:.875rem;color:${tc(0.72,0.7)};line-height:1.7">${escHtml(summary)}</p>
         </div>` : ''}
         ${highlightedText ? `<div style="padding:14px 18px;max-height:280px;overflow-y:auto">
-          <p style="font-size:.68rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;font-family:var(--font-mono)">본문 <span style="color:rgba(0,200,255,.6)">(AI 의심 구간 하이라이트)</span></p>
-          <div style="font-size:.82rem;color:rgba(255,255,255,.5);line-height:1.8;white-space:pre-wrap;word-break:break-word">${highlightedText}</div>
+          <p style="font-size:.68rem;color:${tc(0.3,0.4)};text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;font-family:var(--font-mono)">본문 <span style="color:rgba(0,200,255,.6)">(AI 의심 구간 하이라이트)</span></p>
+          <div style="font-size:.82rem;color:${tc(0.5,0.6)};line-height:1.8;white-space:pre-wrap;word-break:break-word">${highlightedText}</div>
         </div>` : ''}
       </div>`;
   }
@@ -664,16 +664,16 @@
     return `
       <div class="ring-chart-wrap">
         <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-          <circle class="ring-chart__bg" cx="${cx}" cy="${cy}" r="${r}" stroke="rgba(255,255,255,.06)" stroke-width="${stroke}"/>
+          <circle class="ring-chart__bg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${tc(0.06,0.08)}" stroke-width="${stroke}"/>
           <circle id="${uid}" class="ring-chart__arc"
-            cx="${cx}" cy="${cy}" r="${r}"
+            cx="${cx}" cy="${cy}" r="${r}" fill="none"
             stroke="${color}" stroke-width="${stroke}"
             stroke-dasharray="${circ}"
             stroke-dashoffset="${circ}"
             transform="rotate(-90 ${cx} ${cy})"
           />
           <text class="ring-chart__label" x="${cx}" y="${cy - 4}" font-size="${size > 80 ? 16 : 13}" fill="${color}">${label}</text>
-          <text class="ring-chart__sublabel" x="${cx}" y="${cy + 12}" font-size="7" fill="rgba(255,255,255,.35)">${sublabel}</text>
+          <text class="ring-chart__sublabel" x="${cx}" y="${cy + 12}" font-size="7" fill="${tc(0.35,0.4)}">${sublabel}</text>
         </svg>
       </div>
       <script>
@@ -1044,7 +1044,7 @@
         <div class="modal__header">
           <div>
             <h3 style="font-size:1.125rem;font-weight:700">판별 결과 오류 신고</h3>
-            <p style="font-size:.8125rem;color:rgba(255,255,255,.4);margin-top:4px">AI 판별이 부정확하다고 판단되면 신고해주세요</p>
+            <p style="font-size:.8125rem;color:${tc(0.4,0.5)};margin-top:4px">AI 판별이 부정확하다고 판단되면 신고해주세요</p>
           </div>
           <button class="btn btn--ghost btn--icon" style="margin-left:auto;flex-shrink:0" id="rpt-close-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -1054,7 +1054,7 @@
           <div style="display:flex;flex-direction:column;gap:14px">
             <div style="background:rgba(255,170,0,.06);border:1px solid rgba(255,170,0,.2);border-radius:var(--radius-sm);padding:12px 16px;display:flex;gap:10px;align-items:flex-start">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--clr-warn)" stroke-width="2" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <p style="font-size:.8rem;color:rgba(255,255,255,.55);line-height:1.6">AI 판별은 참고용이며 오류가 있을 수 있습니다. 오류 신고는 모델 개선에 활용됩니다.</p>
+              <p style="font-size:.8rem;color:${tc(0.55,0.6)};line-height:1.6">AI 판별은 참고용이며 오류가 있을 수 있습니다. 오류 신고는 모델 개선에 활용됩니다.</p>
             </div>
             <div class="form-group">
               <label class="form-label">실제 판단 *</label>
@@ -1138,7 +1138,7 @@
     Modal.open({
       title: '커뮤니티에 공유',
       body: `
-        <p style="font-size:.875rem;color:rgba(255,255,255,.5);margin-bottom:14px">판별 결과를 익명 커뮤니티에 공유합니다. 민감한 데이터나 원본 파일은 업로드되지 않습니다.</p>
+        <p style="font-size:.875rem;color:${tc(0.5,0.6)};margin-bottom:14px">판별 결과를 익명 커뮤니티에 공유합니다. 민감한 데이터나 원본 파일은 업로드되지 않습니다.</p>
         <p style="font-size:.8rem;background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.2);border-radius:6px;padding:8px 12px;color:rgba(0,229,160,.85);margin-bottom:14px">📎 분석된 미디어 캡처와 출처 링크(있을 경우)가 함께 공유됩니다.</p>
         <div class="form-group">
           <label class="form-label">코멘트 (선택, 최대 280자)</label>
@@ -1176,7 +1176,7 @@
             Modal.open({
               title: '공유 링크가 생성되었습니다',
               body: `
-                <p style="font-size:.875rem;color:rgba(255,255,255,.5);margin-bottom:14px">아래 링크를 공유하면 판별된 미디어와 결과를 함께 볼 수 있습니다.</p>
+                <p style="font-size:.875rem;color:${tc(0.5,0.6)};margin-bottom:14px">아래 링크를 공유하면 판별된 미디어와 결과를 함께 볼 수 있습니다.</p>
                 <div style="display:flex;gap:8px;align-items:center">
                   <input id="share-link-input" class="form-input" style="flex:1;font-size:.8125rem;font-family:var(--font-mono)" value="${shareLink}" readonly />
                   <button class="btn btn--primary btn--sm" onclick="navigator.clipboard.writeText(document.getElementById('share-link-input').value).then(()=>window.DG.Toast.success('링크가 복사되었습니다'))">복사</button>

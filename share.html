@@ -52,8 +52,8 @@
 
 <main>
   <div id="share-root" class="share-wrap">
-    <div style="text-align:center;padding:80px 0;color:var(--clr-text-faint)">
-      <div class="status-dot" style="width:12px;height:12px;margin:0 auto 16px;animation:pulse 1.2s infinite"></div>
+    <div class="share-loading">
+      <div class="status-dot" style="width:12px;height:12px;margin:0 auto 16px;animation:pulse-dot 1.2s infinite"></div>
       <p>공유 결과를 불러오는 중...</p>
     </div>
   </div>
@@ -84,8 +84,10 @@
   /* ── 에러 표시 ─────────────────────────────────────────────── */
   function showError(title, msg) {
     root.innerHTML = `
-      <div class="error-box">
-        <p style="font-size:3rem;margin-bottom:16px">🔍</p>
+      <div class="error-box fade-up">
+        <svg class="error-box__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
         <h2>${title}</h2>
         <p>${msg}</p>
         <a href="./community.html" style="display:inline-block;margin-top:20px;color:var(--clr-accent);font-size:.875rem">커뮤니티로 돌아가기 →</a>
@@ -121,6 +123,13 @@
 </svg>`;
   }
 
+  /* ── 히어로 아이콘 ─────────────────────────────────────────── */
+  function heroIcon(cls) {
+    if (cls === 'danger') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 6v6c0 5-3.6 8.6-9 10-5.4-1.4-9-5-9-10V6l9-4z"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>';
+    if (cls === 'safe')   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 6v6c0 5-3.6 8.6-9 10-5.4-1.4-9-5-9-10V6l9-4z"/><polyline points="8.5 12.5 11 15 15.5 9.5"/></svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 6v6c0 5-3.6 8.6-9 10-5.4-1.4-9-5-9-10V6l9-4z"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.75" fill="currentColor"/></svg>';
+  }
+
   /* ── 메인 렌더 ─────────────────────────────────────────────── */
   function render(p) {
     const vm   = verdictMeta(p.verdict);
@@ -130,27 +139,38 @@
     const tIcon = {video:'🎬', image:'🖼', url:'🔗'}[tc] || '📄';
     const tLabel = {video:'VIDEO', image:'IMAGE', url:'URL'}[tc] || 'FILE';
     const nameLabel = p.fileName
-      ? `<span style="color:rgba(255,255,255,.65)">${escHtml(p.fileName)}</span>`
+      ? `<span style="color:var(--clr-text-muted)">${escHtml(p.fileName)}</span>`
       : p.sourceUrl
         ? `<a href="${escHtml(p.sourceUrl)}" target="_blank" rel="noopener" style="color:var(--clr-accent);word-break:break-all">${escHtml(p.sourceUrl)}</a>`
         : '<span style="color:var(--clr-text-faint)">알 수 없음</span>';
 
     const shareUrl = location.href;
-    const accentHex = p.verdict==='DEEPFAKE'?'#ff3b5c':p.verdict==='AUTHENTIC'?'#00e5a0':'#ffaa00';
+    const avgPct = (p.avgConfidence*100).toFixed(1);
 
     root.innerHTML = `
-      <!-- Header -->
-      <div style="margin-bottom:28px">
-        <p class="text-label fade-up" style="margin-bottom:8px">
-          <span style="margin-right:10px">🔗 공유된 판별 결과</span>
-          <span style="font-size:.6875rem;color:rgba(255,255,255,.25)">${fmtDate(p.postedAt)}</span>
-        </p>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
-          <span class="share-badge share-badge--${vm.cls}">${vm.label}</span>
-          <span style="font-size:.75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:2px 8px;font-family:var(--font-mono)">${tIcon} ${tLabel}</span>
-          <span style="font-family:var(--font-mono);font-size:.9375rem;font-weight:700;color:${confColor(p.avgConfidence)}">${(p.avgConfidence*100).toFixed(1)}%</span>
+      <!-- Eyebrow -->
+      <p class="share-eyebrow fade-up">
+        <span>🔗 공유된 판별 결과</span>
+        <span class="share-eyebrow__dot"></span>
+        <span>${fmtDate(p.postedAt)}</span>
+      </p>
+
+      <!-- Hero -->
+      <div class="share-hero share-hero--${vm.cls} fade-up">
+        <div class="share-hero__icon">${heroIcon(vm.cls)}</div>
+        <div class="share-hero__main">
+          <p class="text-label mb-6">판별 결과</p>
+          <h1 class="share-hero__verdict">${vm.label}</h1>
+          <div class="share-hero__meta">
+            <span class="share-type-chip">${tIcon} ${tLabel}</span>
+            ${nameLabel}
+          </div>
         </div>
-        <p style="font-size:.875rem;color:rgba(255,255,255,.45)">${nameLabel}</p>
+        <div class="share-hero__confidence">
+          <p class="text-label mb-6">딥페이크 신뢰도</p>
+          <p class="share-hero__confidence-value">${avgPct}%</p>
+          <div class="share-hero__confidence-bar"><div style="width:${avgPct}%"></div></div>
+        </div>
       </div>
 
       <!-- 판별된 미디어 -->
@@ -160,20 +180,9 @@
         <div class="media-box__caption">판별 당시 캡처된 미디어 — 원본 파일이 아닌 분석용 캡처 이미지입니다</div>
       </div>` : ''}
 
-      <!-- 분석 결과 카드 -->
-      <div class="card p-24 fade-up" style="border-color:${accentHex}33;margin-bottom:20px">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px">
-          <div>
-            <p class="text-label mb-6">판별 결과</p>
-            <h2 style="font-size:2.25rem;font-weight:800;color:${accentHex};line-height:1.1;margin:0">${vm.label}</h2>
-          </div>
-          <div style="text-align:right">
-            <p class="text-label mb-6">딥페이크 신뢰도</p>
-            <p style="font-family:var(--font-display);font-size:2.75rem;font-weight:800;color:${confColor(p.avgConfidence)};line-height:1;letter-spacing:-.04em;margin:0">${(p.avgConfidence*100).toFixed(1)}%</p>
-          </div>
-        </div>
-
-        <!-- Stats grid -->
+      <!-- 상세 지표 카드 -->
+      <div class="card p-24 fade-up" style="margin-bottom:20px">
+        <p class="share-section-title">상세 지표</p>
         <div class="stat-row">
           <div class="stat-item">
             <div class="stat-item__label">최대 신뢰도</div>
@@ -195,45 +204,46 @@
 
         <!-- 신뢰도 타임라인 -->
         ${scores.length > 1 ? `
-        <div style="margin-top:4px">
-          <p style="font-size:.75rem;color:rgba(255,255,255,.35);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">신뢰도 타임라인</p>
-          <div class="sparkline-wrap">${buildSparkline(scores)}</div>
-          <p style="font-size:.6875rem;color:rgba(255,255,255,.2);margin-top:4px">점선: 딥페이크 판정 임계값 (68%)</p>
+        <div style="margin-top:18px">
+          <p class="share-section-title" style="margin-bottom:8px">신뢰도 타임라인</p>
+          <div class="share-chart-wrap">${buildSparkline(scores)}</div>
+          <p class="share-chart-note">점선: 딥페이크 판정 임계값 (68%)</p>
         </div>` : ''}
       </div>
 
       <!-- 메모 -->
       ${p.memo ? `
       <div class="card p-20 fade-up" style="margin-bottom:20px">
-        <p class="text-label mb-8">공유자 코멘트</p>
-        <p style="font-size:.9375rem;color:rgba(255,255,255,.7);line-height:1.7">${escHtml(p.memo)}</p>
+        <p class="share-section-title">공유자 코멘트</p>
+        <p class="share-memo">${escHtml(p.memo)}</p>
       </div>` : ''}
 
       <!-- 위조 의심 구간 -->
       ${segs.length ? `
-      <div class="card p-20 fade-up" style="margin-bottom:20px;border-color:rgba(255,59,92,.25)">
-        <p class="text-label mb-12" style="color:rgba(255,59,92,.8)">위조 의심 구간 (${segs.length}개)</p>
-        <div style="border:1px solid rgba(255,59,92,.1);border-radius:6px;overflow:hidden">
+      <div class="card p-20 fade-up" style="margin-bottom:20px;border-color:var(--clr-danger)">
+        <p class="share-section-title" style="color:var(--clr-danger)">위조 의심 구간 (${segs.length}개)</p>
+        <div style="border:1px solid var(--clr-danger-dim);border-radius:6px;overflow:hidden">
           ${segs.map((s,i)=>`
-          <div class="seg-row">
-            <span style="font-family:var(--font-mono);color:var(--clr-text-faint);min-width:28px">#${i+1}</span>
-            <span style="font-family:var(--font-mono)">${fmtTime(s.startTime)} → ${fmtTime(s.endTime)}</span>
-            <span style="font-family:var(--font-mono);color:var(--clr-danger);margin-left:auto">${(s.avgConfidence*100).toFixed(1)}%</span>
-            <span class="badge badge--danger" style="font-size:.5625rem">FAKE</span>
+          <div class="segment-item" style="border-radius:0;border-left:none;border-right:none;${i===0?'border-top:none;':''}${i===segs.length-1?'':'margin-bottom:-1px;'}">
+            <span class="mono" style="font-size:.75rem;color:var(--clr-danger);min-width:24px">#${i+1}</span>
+            <span class="segment-item__time">${fmtTime(s.startTime)} → ${fmtTime(s.endTime)}</span>
+            <div class="segment-item__bar"><div class="segment-item__bar-fill" style="width:${s.avgConfidence*100}%"></div></div>
+            <span class="segment-item__score">${(s.avgConfidence*100).toFixed(1)}%</span>
+            <span class="badge badge--danger">FAKE</span>
           </div>`).join('')}
         </div>
       </div>` : ''}
 
       <!-- 해시 -->
       ${p.hash ? `
-      <div class="card p-16 fade-up" style="margin-bottom:20px;border-color:rgba(0,200,255,.15)">
-        <p class="text-label mb-6">식별 해시</p>
-        <p style="font-family:var(--font-mono);font-size:.75rem;color:var(--clr-accent);word-break:break-all;line-height:1.7">${p.hash}</p>
+      <div class="card p-16 fade-up" style="margin-bottom:20px">
+        <p class="share-section-title">식별 해시</p>
+        <p class="share-hash">${p.hash}</p>
       </div>` : ''}
 
       <!-- 공유 링크 복사 -->
       <div class="card p-20 fade-up" style="margin-bottom:20px">
-        <p class="text-label mb-10">이 결과 공유하기</p>
+        <p class="share-section-title">이 결과 공유하기</p>
         <div class="copy-link-row">
           <input id="copy-link-input" class="form-input" style="flex:1;font-size:.8125rem;font-family:var(--font-mono)" value="${shareUrl}" readonly />
           <button class="btn btn--primary btn--sm" onclick="
@@ -246,14 +256,14 @@
 
       <!-- 워터마크 -->
       <div class="share-watermark fade-up">
-        <a href="./index.html" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:rgba(255,255,255,.4)">
+        <a href="./index.html" class="share-watermark__brand">
           <svg width="18" height="18" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#0a0e1a"/><path d="M16 6 L26 11 V17 C26 22 21 26 16 28 C11 26 6 22 6 17 V11 Z" fill="none" stroke="#00e5a0" stroke-width="2"/><circle cx="16" cy="18" r="3" fill="#00e5a0"/><line x1="16" y1="12" x2="16" y2="15" stroke="#00e5a0" stroke-width="2"/></svg>
-          <span style="font-size:.875rem;font-weight:600">DeepGuard Pro</span>
+          <span>DeepGuard Pro</span>
         </a>
-        <p style="font-size:.75rem;color:rgba(255,255,255,.2);margin-top:8px">본 결과는 AI 기반 분석이며 법적 효력을 위해서는 전문가 검토가 필요합니다.</p>
-        <div style="display:flex;gap:12px;justify-content:center;margin-top:14px;flex-wrap:wrap">
-          <a href="./index.html"     style="font-size:.8125rem;color:var(--clr-accent)">새로 판별하기</a>
-          <a href="./community.html" style="font-size:.8125rem;color:rgba(255,255,255,.35)">커뮤니티 보기</a>
+        <p class="share-watermark__disclaimer">본 결과는 AI 기반 분석이며 법적 효력을 위해서는 전문가 검토가 필요합니다.</p>
+        <div class="share-watermark__links">
+          <a href="./index.html">새로 판별하기</a>
+          <a href="./community.html">커뮤니티 보기</a>
         </div>
       </div>`;
   }
